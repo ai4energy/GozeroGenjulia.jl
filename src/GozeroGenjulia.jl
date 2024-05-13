@@ -3,9 +3,10 @@ module GozeroGenjl
 # using Pkg
 # Pkg.add("Lerche")
 using Lerche
-struct SyntaxData
-    value::String
+struct ApiSyntax
+    version::String
 end
+
 gozero_grammar = raw"""
     ?start: spec
 
@@ -15,7 +16,7 @@ gozero_grammar = raw"""
     syntax_lit: "syntax" "=" STRING
     
     WHITESPACE: /[ \t\r\n\f]+/
-    COMMENT: /\/\*.*?\*\//
+    COMMENT: /(?s)\/\*.*?\*\//
     LINE_COMMENT: /\/\/[^\n]*\n?/
     STRING: ESCAPED_STRING
     RAW_STRING: /`([^`\\]|\\[\s\S])*`/
@@ -28,18 +29,20 @@ gozero_grammar = raw"""
     %ignore LINE_COMMENT
 """
 
-struct TreeToAPISPEC <: Transformer
-end
+struct TreeToAPISPEC <: Transformer end
 ####以下的解析函数使用@rule的宏定义的函数代替，所以注释掉了
 #= Lerche.transformer_func(t::TreeToAPISPEC, ::Val{:syntax_lit}, meta::Lerche.Meta, tree) = begin
             SyntaxData(tree[1][2:end-1]) 
 end
  =#
-@rule  syntax_lit(t::TreeToAPISPEC,tree) = SyntaxData(tree[1][2:end-1])
+@rule  syntax_lit(t::TreeToAPISPEC,tree) = ApiSyntax(tree[1][2:end-1])
 
 gozero_parser = Lark(gozero_grammar, parser="lalr", lexer="standard", transformer=TreeToAPISPEC());
 # 测试 API 描述
 api_description = raw"""syntax = "v1"
+/* dfa wom 
+fda woshi zhushi
+*/
 
 """
 
