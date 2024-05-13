@@ -1,0 +1,51 @@
+ATDOC: "@doc"
+
+// ATHANDLER: "@handler"
+// INTERFACE: "interface{}"
+// ATSERVER: "@server"
+// ID: /[a-zA-Z$_][a-zA-Z0-9$_]*/
+// STRING: "\"" (/[^\\"\n]/ | ESCAPE_SEQUENCE)* "\""
+// RAW_STRING: "`" (/[^\`\\]/ | ESCAPE_SEQUENCE)+ "`"
+// COMMENT: "/*" /.*?/ "*/"
+// LINE_COMMENT: "//" /[^\n]*/
+// DIGIT: /[0-9]/
+// HEX_DIGIT: /[0-9a-fA-F]/
+// ESCAPE_SEQUENCE: "\\" /[btnfr"'\\]/
+//                 | "\\" /[0-7]{1,3}/
+//                 | "\\" "u" HEX_DIGIT{4}
+                
+// %ignore /[\s]+/             // 忽略空白字符
+// %ignore "/*" /.*?/ "*/"      // 忽略块注释
+// %ignore "//" /[^\n]*/        // 忽略行注释
+// type_spec: "type" ID type_body
+// type_body: type_struct | type_alias
+// type_struct: "{" field* "}"
+// type_alias: "=" ID
+
+// field: ID ID (":" ID)?
+// service_spec: "@server" "(" kv_lit* ")" "{" service_route* "}"
+// service_route: "@doc" "?" route
+// route: ID path body? response?
+
+// path: "/" (path_item ("/" path_item)*)?
+// path_item: ID | DIGIT
+// body: "(" ID ")"
+// response: "returns" "(" ID ")"
+// service_spec: "@server" "(" kv_lit* ")" service_content
+// service_content: "{" service_route* "}"
+
+// service_route: route_decorator route_definition
+// route_decorator: at_doc? at_handler?
+// at_doc: "@doc" "(" STRING ")"
+// at_handler: "@handler" ID
+
+// route_definition: http_method path "(" request? ")" "returns" "(" response? ")"
+
+// http_method: "GET" | "POST" | "PUT" | "DELETE" // 根据实际需要添加更多
+// path: "/" (path_item ("/" path_item)*)?
+// path_item: ID | DIGIT
+
+// request: data_type
+// response: data_type
+
+// data_type: ID // 更复杂的数据类型定义可能需要额外规则
