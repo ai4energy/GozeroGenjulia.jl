@@ -16,8 +16,13 @@ gozero_grammar = raw"""
     letter: /[A-Za-z_]/
     identifier: letter (letter | decimal_digit | "_")*    
 
-    spec: syntax_stmt 
+    spec: syntax_stmt | info_stmt
     syntax_stmt: "syntax" "=" STRING
+
+    info_stmt: "info" "(" info_key_value_expr* ")"
+    info_key_value_expr: info_key_lit interpreted_string_lit
+    info_key_lit: identifier ":"
+    interpreted_string_lit: STRING
 
     WHITESPACE: /[ \t\r\n\f]+/
     COMMENT: /(?s)\/\*.*?\*\//
@@ -36,15 +41,24 @@ struct TreeToAPISPEC <: Transformer end
             SyntaxData(tree[1][2:end-1]) 
 end
  =#
+
+Lerche.transformer_func(t::TreeToAPISPEC, ::Val{:gozeroapi}, meta::Lerche.Meta, tree) = begin
+    tree[1]
+end
+
 @rule  gozeroapi(t::TreeToAPISPEC,tree) = tree[1]
 @rule  syntax_stmt(t::TreeToAPISPEC,tree) = ApiSyntax(tree[1][2:end-1])
+@rule  info_stmt(t::TreeToAPISPEC,tree) = tree[1]
 
 gozero_parser = Lark(gozero_grammar, parser="lalr", start="gozeroapi", lexer="standard", transformer=TreeToAPISPEC())
+gozero_parser = Lark(gozero_grammar, parser="lalr", start="gozeroapi", lexer="standard")
+# 测试 API 描述
 # 测试 API 描述
 api_description = raw"""syntax = "v1"
 /* dfa wom 
 fda woshi zhushi
 */
+info (abc: "my")
 
 """
 
