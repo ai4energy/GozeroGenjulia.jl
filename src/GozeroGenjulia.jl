@@ -8,25 +8,26 @@ struct ApiSyntax
 end
 
 gozero_grammar = raw"""
-    ?start: spec
+    gozeroapi: spec*
 
-    ?spec: syntax_lit
+    decimal_digit: /[0-9]/
+    number: /[0-9]/
+    lower_letter: /[a-z]/
+    letter: /[A-Za-z_]/
+    identifier: letter (letter | decimal_digit | "_")*    
 
+    spec: syntax_stmt 
+    syntax_stmt: "syntax" "=" STRING
 
-    syntax_lit: "syntax" "=" STRING
-    
     WHITESPACE: /[ \t\r\n\f]+/
     COMMENT: /(?s)\/\*.*?\*\//
     LINE_COMMENT: /\/\/[^\n]*\n?/
     STRING: ESCAPED_STRING
-    RAW_STRING: /`([^`\\]|\\[\s\S])*`/
-
     %import common.ESCAPED_STRING
-    %import common.SIGNED_NUMBER
-
     %ignore WHITESPACE
     %ignore COMMENT
     %ignore LINE_COMMENT
+
 """
 
 struct TreeToAPISPEC <: Transformer end
@@ -35,9 +36,10 @@ struct TreeToAPISPEC <: Transformer end
             SyntaxData(tree[1][2:end-1]) 
 end
  =#
-@rule  syntax_lit(t::TreeToAPISPEC,tree) = ApiSyntax(tree[1][2:end-1])
+@rule  gozeroapi(t::TreeToAPISPEC,tree) = tree[1]
+@rule  syntax_stmt(t::TreeToAPISPEC,tree) = ApiSyntax(tree[1][2:end-1])
 
-gozero_parser = Lark(gozero_grammar, parser="lalr", lexer="standard", transformer=TreeToAPISPEC());
+gozero_parser = Lark(gozero_grammar, parser="lalr", start="gozeroapi", lexer="standard", transformer=TreeToAPISPEC())
 # 测试 API 描述
 api_description = raw"""syntax = "v1"
 /* dfa wom 
