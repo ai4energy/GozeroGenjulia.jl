@@ -1,7 +1,7 @@
 module GozeroGenjl
 
-using Pkg
-Pkg.add("Lerche")
+# using Pkg
+# Pkg.add("Lerche")
 using Lerche
 gozero_grammar = raw"""
     ?start: spec
@@ -24,9 +24,7 @@ struct TreeToAPISPEC <: Transformer
 end
 
 Lerche.transformer_func(t::TreeToAPISPEC, ::Val{:syntax_lit}, meta::Lerche.Meta, tree) = begin
-      dump(tree)
-      #= REPL[5]:1 =#
-      Dict(tree)
+    Dict("syntax"=>tree)
 end
 
 gozero_parser = Lark(gozero_grammar, parser="lalr", lexer="standard", transformer=TreeToAPISPEC());
