@@ -1,3 +1,4 @@
+const gozero_grammar_spec = raw"""
 // 参见go-zero的api规范网页 https://go-zero.dev/docs/tutorials
 
 api            = SyntaxStmt | InfoStmt | { ImportStmt } | { TypeStmt } | { ServiceStmt } .
@@ -75,3 +76,4 @@ letter                = "A"..."Z" | "a"..."z" | "_" .
 decimal_digit         = "0" ... "9" .
 
 escape_sequence       = "\\" ("n" | "t" | "\"" | "\\" | ...) ; 
+"""
