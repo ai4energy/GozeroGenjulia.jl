@@ -53,12 +53,13 @@ end
 gozero_parser = Lark(gozero_grammar, parser="lalr", start="gozeroapi", lexer="standard", transformer=TreeToAPISPEC())
 gozero_parser = Lark(gozero_grammar, parser="lalr", start="gozeroapi", lexer="standard")
 # 测试 API 描述
-# 测试 API 描述
+
 api_description = raw"""syntax = "v1"
 /* dfa wom 
 fda woshi zhushi
 */
-info (abc: "my")
+info (abc: "my"
+desc:    "演示如何编写 api 文件")
 
 """
 
