@@ -1,6 +1,6 @@
 module GozeroJulia
 
-export parse_api, ApiSpec, ApiSyntax, Type, Service, Doc, Annotation, Import, Group, Info, Member, Route, DefineStruct, PrimitiveType, MapType, ArrayType, InterfaceType, PointerType, AtDoc
+export parse_api, ApiSpec, ApiSyntax, struct, Service, Doc, Annotation, Import, Group, Info, Member, Route, DefineStruct, Primitivestruct, Mapstruct, Arraystruct, Interfacestruct, Pointerstruct, AtDoc
 
 # 定义基础结构
 struct Doc
@@ -11,30 +11,6 @@ struct Annotation
     properties::Dict{String, String}
 end
 
-struct ApiSyntax
-    version::String
-    doc::Doc
-    comment::Doc
-end
-
-struct ApiSpec
-    info::Info
-    syntax::ApiSyntax
-    imports::Vector{Import}
-    types::Vector{Type}
-    service::Service
-end
-
-struct Import
-    value::String
-    doc::Doc
-    comment::Doc
-end
-
-struct Group
-    annotation::Annotation
-    routes::Vector{Route}
-end
 
 struct Info
     title::String
@@ -45,21 +21,33 @@ struct Info
     properties::Dict{String, String}
 end
 
-struct Member
-    name::String
-    type::Type
-    tag::String
-    comment::String
-    docs::Doc
-    isinline::Bool
+struct ApiSyntax
+    version::String
+    doc::Doc
+    comment::Doc
 end
+
+
+struct Import
+    value::String
+    doc::Doc
+    comment::Doc
+end
+
+struct AtDoc
+    properties::Dict{String, String}
+    text::String
+end
+
+
+abstract type  ApiStruct end
 
 struct Route
     atserverannotation::Annotation
     method::String
     path::String
-    requesttype::Type
-    responsetype::Type
+    requeststruct::ApiStruct
+    responsestruct::ApiStruct
     docs::Doc
     handler::String
     atdoc::AtDoc
@@ -69,47 +57,68 @@ struct Route
     comment::Doc
 end
 
+struct Group
+    annotation::Annotation
+    routes::Vector{Route}
+end
+
+
 struct Service
     name::String
     groups::Vector{Group}
 end
 
-abstract type Type end
+struct ApiSpec
+    info::Info
+    syntax::ApiSyntax
+    imports::Vector{Import}
+    apistructs::Vector{ApiStruct}
+    service::Service
+end
 
-struct DefineStruct <: Type
+
+struct Member
+    name::String
+    Memberstruct::ApiStruct
+    tag::String
+    comment::String
+    docs::Doc
+    isinline::Bool
+end
+
+
+
+
+struct DefineStruct <: ApiStruct
     rawname::String
     members::Vector{Member}
     docs::Doc
 end
 
-struct PrimitiveType <: Type
+struct Primitivestruct <: ApiStruct
     rawname::String
 end
 
-struct MapType <: Type
+struct Mapstruct <: ApiStruct
     rawname::String
     key::String
-    value::Type
+    value::ApiStruct
 end
 
-struct ArrayType <: Type
+struct Arraystruct <: ApiStruct
     rawname::String
-    value::Type
+    value::ApiStruct
 end
 
-struct InterfaceType <: Type
+struct Interfacestruct <: ApiStruct
     rawname::String
 end
 
-struct PointerType <: Type
+struct Pointerstruct <: ApiStruct
     rawname::String
-    type::Type
+    Pointerstructstruct::ApiStruct
 end
 
-struct AtDoc
-    properties::Dict{String, String}
-    text::String
-end
 
 # 解析 Doc
 function parse_doc(lines::Vector{String}, index::Int)::Tuple{Doc, Int}
@@ -161,19 +170,19 @@ end
 
 # 解析 DefineStruct
 function parse_define_struct(lines::Vector{String}, index::Int)::Tuple{DefineStruct, Int}
-    type_name = match(r'type\s+(\w+)\s*{', lines[index]).captures[1]
-    index += 1  # 跳过 type 开始行
+    struct_name = match(r'struct\s+(\w+)\s*{', lines[index]).captures[1]
+    index += 1  # 跳过 struct 开始行
     members = Vector{Member}()
     while index <= length(lines) && !occursin(r"\}", lines[index])
         line = strip(lines[index])
         field = match(r'(\w+)\s+(\w+)\s*`json:"([^"]+)"`', line)
         if field !== nothing
-            push!(members, Member(field.captures[1], PrimitiveType(field.captures[2]), field.captures[3], "", Doc([]), false))
+            push!(members, Member(field.captures[1], Primitivestruct(field.captures[2]), field.captures[3], "", Doc([]), false))
         end
         index += 1
     end
-    define_struct = DefineStruct(type_name, members, Doc([]))
-    return define_struct, index + 1  # 跳过 type 结束行
+    define_struct = DefineStruct(struct_name, members, Doc([]))
+    return define_struct, index + 1  # 跳过 struct 结束行
 end
 
 # 解析 Service
@@ -189,8 +198,8 @@ function parse_service(lines::Vector{String}, index::Int)::Tuple{Service, Int}
             line = strip(lines[index])
             endpoint = match(r'(\w+)\s+(\S+)\s+\((\w+)\)\s+returns\s+\((\w+)\)', line)
             if endpoint !== nothing
-                method, path, request_type, response_type = endpoint.captures
-                push!(routes, Route(Annotation(Dict()), method, path, PrimitiveType(request_type), PrimitiveType(response_type), Doc([]), handler, AtDoc(Dict(), ""), Doc([]), Doc([]), Doc([]), Doc([])))
+                method, path, request_struct, response_struct = endpoint.captures
+                push!(routes, Route(Annotation(Dict()), method, path, Primitivestruct(request_struct), Primitivestruct(response_struct), Doc([]), handler, AtDoc(Dict(), ""), Doc([]), Doc([]), Doc([]), Doc([])))
             end
         end
         index += 1
@@ -203,7 +212,7 @@ end
 function parse_api(input::String)::ApiSpec
     lines = split(input, "\n")
     syntax = ApiSyntax("", Doc([]), Doc([]))
-    types = Type[]
+    structs = struct[]
     service = Service("", [])
 
     index = 1
@@ -211,9 +220,9 @@ function parse_api(input::String)::ApiSpec
         line = strip(lines[index])
         if startswith(line, "syntax")
             syntax, index = parse_syntax(lines, index)
-        elseif startswith(line, "type")
+        elseif startswith(line, "struct")
             define_struct, index = parse_define_struct(lines, index)
-            push!(types, define_struct)
+            push!(structs, define_struct)
         elseif startswith(line, "service")
             service, index = parse_service(lines, index)
         else
@@ -221,7 +230,7 @@ function parse_api(input::String)::ApiSpec
         end
     end
 
-    return ApiSpec(Info("", "", "", "", "", Dict()), syntax, [], types, service)
+    return ApiSpec(Info("", "", "", "", "", Dict()), syntax, [], structs, service)
 end
 
 end # module
