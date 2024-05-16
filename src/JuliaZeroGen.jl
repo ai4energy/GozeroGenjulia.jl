@@ -110,4 +110,27 @@ struct Pointerstruct <: ApiStruct
     Pointerstructstruct::ApiStruct
 end
 
+
+function parse_syntax(lines::Vector{String})
+    version = ""
+    doc = Doc(String[])
+    comment = Doc(String[])
+    
+    for line in lines
+        if occursin("syntax", line)
+            version = strip(split(line, "=")[2])
+        elseif occursin("doc", line)
+            push!(doc.content, strip(line))
+        elseif occursin("comment", line)
+            push!(comment.content, strip(line))
+        end
+    end    
+    return ApiSyntax(version, doc, comment)
+end
+
+
+filename = joinpath(@__DIR__, "..", "examples/demo.api")
+lines = String.(split(read(filename, String), "\n"))
+parse_syntax(lines)
+
 end # module
